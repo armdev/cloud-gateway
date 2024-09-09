@@ -25,6 +25,7 @@ Start the microservices locally (optimized for Linux environments):
 To benchmark the public endpoints of the Profile Microservice, run the provided script:
 
 ```bash
+
 ./benchmark.sh
 ```
 
@@ -32,4 +33,10 @@ To benchmark the public endpoints of the Profile Microservice, run the provided 
 
 - **Spring Cloud Gateway** protects the Profile Microservice, allowing only authorized access to its secured endpoints.
 - **Spring Cloud Admin** allows you to dynamically adjust log levels of services, helping with debugging and performance tuning.
+
+## Swaggers
+
+1. **GateWay Microservice**: [http://localhost:8080/swagger-ui.html](http://localhost:8080/swagger-ui.html)
+
+1. **Profile Microservice**: [http://localhost:2050/swagger-ui.html](http://localhost:2050/swagger-ui.html)
 
