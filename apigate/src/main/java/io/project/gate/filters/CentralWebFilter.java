@@ -38,14 +38,13 @@ import org.springframework.util.MultiValueMap;
 @AllArgsConstructor
 public class CentralWebFilter implements WebFilter {
 
-   
-    private final FilterUtility filterUtility;    
-    
+    private final FilterUtility filterUtility;
+
     private final GateEventPublisher eventPublisher;
 
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, WebFilterChain chain) {
-      
+
         ServerHttpResponse response = exchange.getResponse();
         ServerHttpRequest request = exchange.getRequest();
         DataBufferFactory dataBufferFactory = response.bufferFactory();
@@ -71,9 +70,14 @@ public class CentralWebFilter implements WebFilter {
 
                 if (body instanceof Flux) {
 
+                    log.info("Processing response for request: ID={}, Method={}, URI={}",
+                            request.getId(), request.getMethod(), request.getURI());
+
                     Flux<? extends DataBuffer> fluxBody = (Flux<? extends DataBuffer>) body;
 
                     return super.writeWith(fluxBody.buffer().map((var dataBuffers) -> {
+
+                        log.debug("Joining response data buffers for request: ID={}", request.getId());
 
                         DefaultDataBuffer joinedBuffers = new DefaultDataBufferFactory().join(dataBuffers);
 
@@ -81,43 +85,52 @@ public class CentralWebFilter implements WebFilter {
                         joinedBuffers.read(content);
 
                         String responseBody = new String(content, StandardCharsets.UTF_8);
+                        log.debug("Response body for request ID={} : {}", request.getId(), responseBody);
 
                         String correlationId = null;
                         if (request.getHeaders().get(CORRELATION_ID) != null) {
                             List<String> requestHeaderList = request.getHeaders().get(CORRELATION_ID);
 
                             if (requestHeaderList != null && !requestHeaderList.isEmpty()) {
-
                                 correlationId = requestHeaderList.stream().findFirst().get();
                             }
-
                         }
-                        log.info("correlationId " + correlationId);
+
+                        log.info("Correlation ID for request ID={} : {}", request.getId(), correlationId != null ? correlationId : "none");
 
                         Set<Map.Entry<String, List<String>>> entrySet = request.getHeaders().entrySet();
                         Map<String, String> allHeaders = parseHeaders(entrySet);
+                        log.debug("Parsed headers for request ID={}: {}", request.getId(), allHeaders);
 
-                        GateResponse gateResponse = new GateResponse(request.getId(), request.getMethod().toString(),
-                                request.getURI().toString(), request.getRemoteAddress() != null ? request.getRemoteAddress().toString() : "none", request.getPath().toString(),
-                                response.getHeaders().toString(), responseBody, correlationId, allHeaders);
+                        GateResponse gateResponse = new GateResponse(
+                                request.getId(),
+                                request.getMethod().toString(),
+                                request.getURI().toString(),
+                                request.getRemoteAddress() != null ? request.getRemoteAddress().toString() : "none",
+                                request.getPath().toString(),
+                                response.getHeaders().toString(),
+                                responseBody,
+                                correlationId,
+                                allHeaders
+                        );
 
-                        log.info("ResponsePublisher " + gateResponse);
-                         eventPublisher.responsePublisher(gateResponse);
+                        log.info("Publishing GateResponse for request ID={}: {}", request.getId(), gateResponse);
+                        eventPublisher.responsePublisher(gateResponse);
+
                         return dataBufferFactory.wrap(responseBody.getBytes());
                     })
                             .switchIfEmpty(Flux.defer(() -> {
-
-                                log.info("Write to database here");
+                                log.warn("Empty response body for request ID={}", request.getId());
                                 return Flux.just();
-                            }))
-                    ).onErrorResume(err -> {
-                        log.error("error while decorating Response: {}", err.getMessage());
-                        return Mono.empty();
-                    });
+                            })))
+                            .onErrorResume(err -> {
+                                log.error("Error while decorating response for request ID={} : {}", request.getId(), err.getMessage(), err);
+                                return Mono.empty();
+                            });
 
                 } else {
-                    log.debug("Ignore me");
-                }              
+                    log.debug("Non-Flux response body for request ID={}: Skipping decoration.", request.getId());
+                }
                 return super.writeWith(body);
             }
         };
@@ -131,46 +144,75 @@ public class CentralWebFilter implements WebFilter {
 
                 return originalBody.flatMap(dataBuffer -> {
                     try {
+                        log.info("Processing request body for request ID={}, Method={}, URI={}",
+                                request.getId(), request.getMethod(), request.getURI());
+
                         byte[] requestBodyBytes = new byte[dataBuffer.readableByteCount()];
                         dataBuffer.read(requestBodyBytes);
-                        // Check if the request body is gzipped and decompress it if needed
+
                         HttpHeaders requestHeaders = request.getHeaders();
-
                         String requestBody = new String(requestBodyBytes, StandardCharsets.UTF_8);
-                        log.debug("RequestBody " + requestBody);
 
-                        String correlationId = request.getHeaders().getFirst(CORRELATION_ID);
+                        log.debug("Request body for request ID={} : {}", request.getId(), requestBody);
+
+                        String correlationId = requestHeaders.getFirst(CORRELATION_ID);
+
+                        log.info("Correlation ID for request ID={} : {}", request.getId(),
+                                correlationId != null ? correlationId : "none");
 
                         Map<String, String> allHeaders = parseHeaders(requestHeaders.entrySet());
                         Map<String, String> queryParams = parseQueryParams(request.getQueryParams());
 
-                        GateRequest gateRequest = new GateRequest(request.getId(), request.getMethod().name(),
+                        log.debug("Parsed headers for request ID={}: {}", request.getId(), allHeaders);
+                        log.debug("Parsed query params for request ID={}: {}", request.getId(), queryParams);
+
+                        GateRequest gateRequest = new GateRequest(
+                                request.getId(),
+                                request.getMethod().name(),
                                 request.getURI().toString(),
                                 request.getRemoteAddress() != null ? request.getRemoteAddress().toString() : "none",
-                                request.getPath().value(), request.getHeaders().toString(), requestBody,
-                                queryParams, correlationId, allHeaders);
-                        log.debug("Request requestPublisher " + gateRequest);
+                                request.getPath().value(),
+                                request.getHeaders().toString(),
+                                requestBody,
+                                queryParams,
+                                correlationId,
+                                allHeaders
+                        );
+
+                        log.info("Publishing GateRequest for request ID={}: {}", request.getId(), gateRequest);
                         eventPublisher.requestPublisher(gateRequest);
+
                         // Recreate the request body with the original data
                         DataBuffer buffer = new DefaultDataBufferFactory().wrap(requestBodyBytes);
-
                         return Flux.just(buffer);
+
                     } catch (Exception e) {
-                        log.error("Error processing request body: " + e.getMessage());
+                        log.error("Error processing request body for request ID={} : {}", request.getId(), e.getMessage(), e);
                         return Flux.empty();
                     }
                 }).switchIfEmpty(Mono.fromRunnable(() -> {
+                    log.warn("Request with no body for request ID={}, Method={}, URI={}",
+                            request.getId(), request.getMethod(), request.getURI());
+
                     String correlationId = request.getHeaders().getFirst(CORRELATION_ID);
-                    log.debug("Request with no body");
                     Map<String, String> allHeaders = parseHeaders(request.getHeaders().entrySet());
                     Map<String, String> queryParams = parseQueryParams(request.getQueryParams());
 
-                    GateRequest gateRequest = new GateRequest(request.getId(), request.getMethod().name(),
+                    GateRequest gateRequest = new GateRequest(
+                            request.getId(),
+                            request.getMethod().name(),
                             request.getURI().toString(),
                             request.getRemoteAddress() != null ? request.getRemoteAddress().toString() : "none",
-                            request.getPath().value(), request.getHeaders().toString(), "", queryParams, correlationId, allHeaders);
-                    log.debug("Request no body RequestPublisher " + gateRequest);
-                  eventPublisher.requestPublisher(gateRequest);
+                            request.getPath().value(),
+                            request.getHeaders().toString(),
+                            "",
+                            queryParams,
+                            correlationId,
+                            allHeaders
+                    );
+
+                    log.info("Publishing GateRequest (no body) for request ID={}: {}", request.getId(), gateRequest);
+                    eventPublisher.requestPublisher(gateRequest);
                 })).publishOn(Schedulers.boundedElastic());
             }
         };
@@ -210,7 +252,5 @@ public class CentralWebFilter implements WebFilter {
 
         return parsedQueryParams;
     }
-
-    
 
 }

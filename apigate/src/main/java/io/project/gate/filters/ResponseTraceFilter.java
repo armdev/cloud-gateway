@@ -16,7 +16,7 @@ import reactor.core.publisher.Mono;
 @Slf4j
 @AllArgsConstructor
 public class ResponseTraceFilter {
-   
+
     private final FilterUtility filterUtility;
 
     @Bean

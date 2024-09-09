@@ -61,8 +61,8 @@ public class RequestTraceFilter implements GlobalFilter {
 
 // Helper method to check if the request path is public
     private boolean isPublicUrl(String requestPath) {
-        return requestPath.contains("/api/v2/profile/fetch")
-                || requestPath.contains("/api/v2/profile/register")
+        return requestPath.startsWith("/api/v2/profile/fetch")
+                || requestPath.startsWith("/api/v2/profile/register")
                 || requestPath.startsWith("/v3/api-docs/swagger-config")
                 || requestPath.startsWith("/swagger");
     }

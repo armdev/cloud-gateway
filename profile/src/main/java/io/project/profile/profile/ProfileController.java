@@ -28,7 +28,7 @@ public class ProfileController {
         log.info("profile info only");
         log.warn("profile warn only");
         log.trace("profile traces only");
-        return "profile done";
+        return "profile fetched";
     }
 
     @PostMapping("/register")
