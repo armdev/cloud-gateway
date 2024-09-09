@@ -1,0 +1,89 @@
+management:
+  health:
+    livenessstate:
+      enabled: true
+    readinessstate:
+      enabled: true
+  security:
+    enabled: false
+  server:
+    port: 2060
+  tracing:
+    sampling:
+      probability: 1.0
+  endpoint:
+    health:
+      enabled: true
+      show-details: ALWAYS
+    probes:
+      enabled: true
+  endpoints:
+    jmx:
+      exposure:
+       include: '*'
+    web:
+     exposure:
+      include: '*'
+    cors:
+      allowed-origins: 'true'
+      enabled-by-default: 'false'
+      
+server:
+    tomcat:        
+      connection-timeout: 20m
+      keep-alive-timeout: 20m
+    shutdown: GRACEFUL
+    http2:
+     enabled: true
+    port: 2050
+    servlet:
+      session:
+        timeout: 10m
+    compression:
+      enabled: true
+      mime-types: text/html,text/xml,text/plain,text/css,text/javascript,application/javascript,application/json
+      min-response-size: 1024
+
+      
+spring:
+  boot:
+    admin:
+      client:
+        url: "http://localhost:1111"  # This is the Admin Server URL
+      monitor:
+        default-timeout: 10s
+      instance:
+        service-base-url: "http://localhost:2060"  # The base URL of your microservice
+        management-url: "http://localhost:2060/actuator"  # Explicitly set the actuator URL
+        health-url: "http://localhost:2060/actuator/health"
+  thread:
+    virtual:
+      enabled: true
+  main:
+    allow-circular-references: false
+    lazy-initialization: false
+  application:
+    name: profile
+    
+  profiles:
+    active:
+       DEV  
+     
+  cloud:
+    discovery:
+       service-id: profile
+       enabled: true       
+    config:
+      enabled: false
+      
+
+
+
+  jackson:
+    serialization:
+      write_dates_as_timestamps: false
+
+logging:
+    level:
+      root: INFO
+      io.project: INFO

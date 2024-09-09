@@ -1,0 +1,16 @@
+http://localhost:8080/profile/api/v2/profile/fetch
+ab -n 1000 -c 100 http://localhost:8080/profile/api/v2/profile/fetch?userId=2025
+
+ab -n 100 -c 100 http://localhost:8080/profile/api/v2/profile/register
+
+curl -X POST http://localhost:8080/profile/api/v2/profile/register \
+     -H "Content-Type: application/json" \
+     -d '{"name": "John Doe", "email": "john.doe@example.com"}'
+
+
+
+http://localhost:8088/actuator
+http://localhost:8088/actuator/circuitbreakerevents
+https://github.com/armdev/mobile-gate/blob/a57aaf6ee722b21222fb8ef2369dfd323a3a39f7/gate/src/main/java/io/banqr/myameria/gate/filters/GateRequestRateLimiterGatewayFilter.java#L90
+
+

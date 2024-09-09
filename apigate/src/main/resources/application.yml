@@ -1,0 +1,111 @@
+management:
+  health:
+    livenessstate:
+      enabled: true
+    readinessstate:
+      enabled: true
+  security:
+    enabled: false
+  server:
+    port: 8088
+  tracing:
+    sampling:
+      probability: 1.0
+  endpoint:
+    health:
+      enabled: true
+      show-details: ALWAYS
+    probes:
+      enabled: true
+  endpoints:
+    jmx:
+      exposure:
+       include: '*'
+    web:
+     exposure:
+      include: '*'
+    cors:
+      allowed-origins: 'true'
+      enabled-by-default: 'false'
+
+
+server:
+    max-http-request-header-size: 16384
+    compression:
+      enabled: true
+      mime-types: text/html,text/xml,text/plain,text/css,text/javascript,application/javascript,application/json
+      min-response-size: 1024   
+    shutdown: GRACEFUL
+    http2:
+     enabled: true
+    port: 8080
+    netty:
+      connection-timeout: 30000
+      h2c-max-content-length: 8096
+      initial-buffer-size: 8096
+      max-initial-line-length: 1500
+      validate-headers: FALSE
+      idle-timeout: 5000
+
+spring:
+  boot:
+    admin:
+      client:
+        url: "http://localhost:1111"  # This is the Admin Server URL
+      monitor:
+        default-timeout: 10s
+      instance:
+        service-base-url: "http://localhost:8088"  # The base URL of your microservice
+        management-url: "http://localhost:8088/actuator"  # Explicitly set the actuator URL
+        health-url: "http://localhost:8088/actuator/health"
+        
+  cloud:
+    gateway:
+      discovery:
+        locator:
+          enabled: true
+          lowerCaseServiceId: true
+      httpclient:
+        connect-timeout: 1000
+        response-timeout: 10m
+
+  main:
+    allow-circular-references: false
+    lazy-initialization: false
+
+  application:
+    name: apigate
+
+
+  profiles:
+    active:
+      DEV
+
+logging:
+    pattern:
+      level: '%5p [${spring.application.name:},%X{traceId:-},%X{spanId:-}]'
+    level:
+      root: INFO
+      io.project: INFO
+
+
+# Configurations for Resilience4j CircuitBreaker
+resilience4j.circuitbreaker:
+  
+  # Define custom configurations
+  configs:
+    
+    # Custom configuration named 'customConfig'
+    gateCircuitBreaker:
+      
+      # Number of calls to track in the sliding window
+      slidingWindowSize: 1000
+      
+      # Maximum number of calls allowed in half-open state
+      permittedNumberOfCallsInHalfOpenState: 100
+      
+      # Threshold percentage of failures to open the circuit
+      failureRateThreshold: 50
+      
+      # Time to wait in open state before transitioning to half-open
+      waitDurationInOpenState: 30000
