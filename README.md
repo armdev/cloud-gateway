@@ -40,3 +40,7 @@ To benchmark the public endpoints of the Profile Microservice, run the provided 
 
 1. **Profile Microservice**: [http://localhost:2050/swagger-ui.html](http://localhost:2050/swagger-ui.html)
 
+
+## Run from console for each microservice:
+
+mvn spring-boot:run
