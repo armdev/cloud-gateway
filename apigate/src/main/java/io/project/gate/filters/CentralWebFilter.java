@@ -51,9 +51,7 @@ public class CentralWebFilter implements WebFilter {
         exchange = filterUtility.setCorrelationId(exchange, filterUtility.generateCorrelationId());
 
         HttpStatusCode statusCode = exchange.getResponse().getStatusCode();
-
-        log.info("STATUS CODE " + statusCode);
-
+        log.info("STATUS CODE " + statusCode + " for "+ request.getURI());
         // log the request body
         ServerHttpRequest decoratedRequest = getDecoratedRequest(request);
 
