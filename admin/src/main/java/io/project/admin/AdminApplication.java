@@ -1,4 +1,4 @@
-package io.project.admin;
+ package io.project.admin;
 
 import de.codecentric.boot.admin.server.config.EnableAdminServer;
 import org.springframework.boot.Banner;
